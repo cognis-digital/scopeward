@@ -10,6 +10,51 @@ If the answer is no, the action is refused. If yes, the decision is written to a
 
 `scopeward` is **standard-library only** — no third-party dependencies — so it can be vendored into any tool.
 
+
+<!-- cognis:example:start -->
+## 🔎 Example output
+
+Real, reproducible output from the tool — runs offline:
+
+```console
+$ scopeward --help
+usage: scopeward [-h] [--version] {sign,verify,check,audit} ...
+
+Command-line interface for scopeward.
+
+positional arguments:
+  {sign,verify,check,audit}
+    sign                sign a scope document
+    verify              verify a scope signature
+    check               check whether an action is authorized
+    audit               verify an evidence log hash chain
+
+options:
+  -h, --help            show this help message and exit
+  --version             print version and exit
+```
+
+> Blocks above are real `scopeward` output — reproduce them from a clone.
+
+**Sample result format** _(illustrative values — run on your own data for real findings):_
+
+```
+$ scopeward sign --scope-id SCOPE-12345 --document-hash 0xdeadbeef
+Signed scope document: SCOPE-12345
+Signature hash: 0x5a4d8c1f
+
+$ scopeward verify --signature-hash 0x5a4d8c1f --scope-id SCOPE-12345
+Verification successful!
+
+$ scopeward check --action-id ACTION-67890 --scope-id SCOPE-12345
+Authorized action: ACTION-67890
+
+$ scopeward audit --log-hash-chain 0x1234567890abcdef --scope-id SCOPE-12345
+Audit successful!
+```
+
+<!-- cognis:example:end -->
+
 ## Why a signed scope
 
 A penetration test is defined by a contract: which apps, which devices, what dates, what you may and may not do. `scopeward` makes that contract machine-enforceable.

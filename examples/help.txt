@@ -1,0 +1,16 @@
+$ scopeward --help
+
+usage: scopeward [-h] [--version] {sign,verify,check,audit} ...
+
+Command-line interface for scopeward.
+
+positional arguments:
+  {sign,verify,check,audit}
+    sign                sign a scope document
+    verify              verify a scope signature
+    check               check whether an action is authorized
+    audit               verify an evidence log hash chain
+
+options:
+  -h, --help            show this help message and exit
+  --version             print version and exit
