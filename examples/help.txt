@@ -1,15 +1,19 @@
 $ scopeward --help
 
-usage: scopeward [-h] [--version] {sign,verify,check,audit} ...
+usage: scopeward [-h] [--version]
+                 {sign,verify,validate,check,audit,report,reasons} ...
 
 Command-line interface for scopeward.
 
 positional arguments:
-  {sign,verify,check,audit}
+  {sign,verify,validate,check,audit,report,reasons}
     sign                sign a scope document
     verify              verify a scope signature
+    validate            validate scope structure against the JSON Schema
     check               check whether an action is authorized
     audit               verify an evidence log hash chain
+    report              export findings from an evidence log
+    reasons             print the stable reason-code table
 
 options:
   -h, --help            show this help message and exit

@@ -2,9 +2,9 @@
   "engagement_id": "ENG-2026-001",
   "client": "Acme Corp",
   "authorized_by": "jane.security@acme.example",
-  "roe": "Authorized assessment of Acme mobile apps. No production data exfiltration. Testing window 2026-06-19 to 2026-06-27 UTC. Lab devices only.",
-  "not_before": "2026-06-19T00:00:00Z",
-  "not_after": "2026-06-27T00:00:00Z",
+  "roe": "Authorized assessment of Acme mobile apps. No production data exfiltration. Lab devices only.",
+  "not_before": "2026-01-01T00:00:00Z",
+  "not_after": "2099-12-31T00:00:00Z",
   "targets": [
     { "platform": "android", "app_id": "com.acme.app" },
     { "platform": "ios", "app_id": "com.acme.AcmeApp" }
@@ -13,5 +13,21 @@
     { "device_id": "PIXEL8-ABC123", "label": "lab pixel 8" }
   ],
   "allowed_modules": ["apkprobe", "ipaprobe", "hookbench"],
-  "allow_destructive": false
+  "allow_destructive": false,
+  "grants": [
+    {
+      "grant_id": "G-READ-ALL",
+      "target": "android:com.acme.app",
+      "capabilities": ["instrument"],
+      "note": "read + instrument the Android app for the whole engagement"
+    },
+    {
+      "grant_id": "G-MODIFY-IOS",
+      "target": "ios:com.acme.AcmeApp",
+      "capabilities": ["modify"],
+      "module": "hookbench",
+      "note": "hookbench may modify the iOS app (implies read + instrument)"
+    }
+  ],
+  "revocations": []
 }
