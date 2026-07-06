@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Iterator, Optional
 
 GENESIS = "0" * 64
@@ -90,6 +91,61 @@ class EvidenceLog:
                 raise EvidenceError(f"hash mismatch at record ts={rec.get('ts')}")
             prev = rec["hash"]
         return True
+
+    def summary(self) -> dict[str, Any]:
+        """Return a structured summary of the trail (does not verify).
+
+        Includes total record count, counts by ``kind``, a tally of
+        authorization decision reason codes, and the first/last timestamps.
+        """
+        counts: dict[str, int] = {}
+        codes: dict[str, int] = {}
+        first_ts: Optional[str] = None
+        last_ts: Optional[str] = None
+        total = 0
+        engagement_ids: set[str] = set()
+        for rec in self:
+            total += 1
+            kind = rec.get("kind", "?")
+            counts[kind] = counts.get(kind, 0) + 1
+            ts = rec.get("ts")
+            if ts:
+                if first_ts is None:
+                    first_ts = ts
+                last_ts = ts
+            eid = rec.get("engagement_id")
+            if eid:
+                engagement_ids.add(eid)
+            code = (rec.get("data") or {}).get("code")
+            if code:
+                codes[code] = codes.get(code, 0) + 1
+        return {
+            "total": total,
+            "by_kind": dict(sorted(counts.items())),
+            "by_code": dict(sorted(codes.items())),
+            "first_ts": first_ts,
+            "last_ts": last_ts,
+            "engagement_ids": sorted(engagement_ids),
+        }
+
+    def findings(self) -> list[dict[str, Any]]:
+        """Return the ``data`` payloads of every ``finding`` record."""
+        return [rec.get("data", {}) for rec in self if rec.get("kind") == "finding"]
+
+    def export(self, path: str) -> int:
+        """Write the full trail as a JSON array to ``path``; return count.
+
+        Useful for archiving or handing an auditor a single self-contained
+        artifact. The exported form is verifiable-adjacent (the hash chain is
+        preserved per record) but callers should keep the original JSONL as the
+        canonical evidence.
+        """
+        records = list(self)
+        out = Path(path)
+        if out.parent and not out.parent.exists():
+            out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(records, indent=2), encoding="utf-8")
+        return len(records)
 
 
 def body_without_hash(body: dict[str, Any]) -> dict[str, Any]:
