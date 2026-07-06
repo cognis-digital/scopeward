@@ -22,10 +22,29 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Test
         run: python -m pytest -q
+      - name: Run all demos (must exit 0)
+        run: python demos/run_all.py
       - name: Smoke CLI
         run: |
           export SCOPEWARD_KEY=ci-key
-          scopeward sign   --scope examples/engagement.example.json --out /tmp/signed.json
-          scopeward verify --scope /tmp/signed.json
-          scopeward check  --scope /tmp/signed.json --module apkprobe --target android:com.acme.app --log /tmp/ev.jsonl
-          scopeward audit  --log /tmp/ev.jsonl
+          scopeward --version
+          scopeward validate --scope examples/engagement.example.json
+          scopeward sign     --scope examples/engagement.example.json --out /tmp/signed.json
+          scopeward verify   --scope /tmp/signed.json
+          scopeward check    --scope /tmp/signed.json --module apkprobe --target android:com.acme.app --log /tmp/ev.jsonl
+          scopeward check    --scope /tmp/signed.json --module hookbench --target ios:com.acme.AcmeApp --capability modify --log /tmp/ev.jsonl
+          scopeward audit    --log /tmp/ev.jsonl --summary
+          scopeward report   --log /tmp/ev.jsonl --format table
+      - name: Smoke SARIF export
+        run: |
+          export SCOPEWARD_KEY=ci-key
+          python - <<'PY'
+          from scopeward.evidence import EvidenceLog
+          from scopeward.findings import Finding
+          log = EvidenceLog("/tmp/ev.jsonl", "ENG-2026-001")
+          log.record("finding", Finding("Cleartext traffic permitted", "high",
+                     "android:com.acme.app", module="apkprobe",
+                     masvs="MASVS-NETWORK-1", mastg_test="MASTG-TEST-0019").to_dict())
+          PY
+          scopeward report --log /tmp/ev.jsonl --format sarif --out /tmp/scopeward.sarif
+          python -c "import json; d=json.load(open('/tmp/scopeward.sarif')); assert d['version']=='2.1.0'; assert d['runs'][0]['results']; print('SARIF OK', len(d['runs'][0]['results']), 'result(s)')"
