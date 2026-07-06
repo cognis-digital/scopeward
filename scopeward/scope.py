@@ -90,6 +90,8 @@ class Scope:
     devices: list[Device] = field(default_factory=list)
     allowed_modules: list[str] = field(default_factory=list)
     allow_destructive: bool = False
+    grants: list[Any] = field(default_factory=list)          # list[grants.Grant]
+    revocations: Any = None                                    # revocation.RevocationList | None
     signature: str | None = None
 
     # ----- construction -------------------------------------------------
@@ -103,9 +105,26 @@ class Scope:
             raise ScopeError("scope must authorize at least one target app")
         if not self.allowed_modules:
             raise ScopeError("scope must list at least one allowed module")
+        # Normalize revocations so direct construction and from_dict agree.
+        if self.revocations is None:
+            from .revocation import RevocationList
+            self.revocations = RevocationList()
+        # Every grant must reference a target that this scope actually authorizes.
+        known = self.target_keys()
+        for grant in self.grants:
+            if grant.target not in known:
+                raise ScopeError(
+                    f"grant {grant.grant_id!r} references target {grant.target!r} "
+                    "which is not an authorized target of this scope"
+                )
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Scope":
+        # Local imports avoid a circular dependency: grants/revocation import
+        # helpers from this module.
+        from .grants import Grant
+        from .revocation import RevocationList
+
         if not isinstance(data, dict):
             raise ScopeError("scope document must be a JSON object")
         try:
@@ -113,6 +132,8 @@ class Scope:
             devices = [Device(**d) if isinstance(d, dict) else _bad_device(d) for d in data.get("devices", [])]
         except TypeError as exc:
             raise ScopeError(f"malformed target/device entry: {exc}") from exc
+        grants = [Grant.from_dict(g) for g in data.get("grants", [])]
+        revocations = RevocationList.from_list(data.get("revocations"))
         return cls(
             engagement_id=data.get("engagement_id", ""),
             client=data.get("client", ""),
@@ -124,6 +145,8 @@ class Scope:
             devices=devices,
             allowed_modules=list(data.get("allowed_modules", [])),
             allow_destructive=bool(data.get("allow_destructive", False)),
+            grants=grants,
+            revocations=revocations,
             signature=data.get("signature"),
         )
 
@@ -146,6 +169,12 @@ class Scope:
             "allowed_modules": list(self.allowed_modules),
             "allow_destructive": self.allow_destructive,
         }
+        # Emit grants/revocations only when present so scopes that use neither
+        # serialize (and therefore sign/verify) byte-identically to v0.1.0.
+        if self.grants:
+            data["grants"] = [g.to_dict() for g in self.grants]
+        if self.revocations is not None and len(self.revocations) > 0:
+            data["revocations"] = self.revocations.to_list()
         if include_signature and self.signature is not None:
             data["signature"] = self.signature
         return data
@@ -165,6 +194,23 @@ class Scope:
     def is_active(self, now: datetime | None = None) -> bool:
         now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
         return self.not_before <= now <= self.not_after
+
+    def grants_for(
+        self,
+        *,
+        target: str,
+        module: str | None = None,
+        device_id: str | None = None,
+    ) -> list[Any]:
+        """Grants that apply to the given (target, module, device) tuple."""
+        return [
+            g for g in self.grants
+            if g.matches(target=target, module=module, device_id=device_id)
+        ]
+
+    def uses_capabilities(self) -> bool:
+        """True if this scope declares any capability grants (ladder mode)."""
+        return bool(self.grants)
 
 
 def _bad_target(value: Any) -> Target:  # pragma: no cover - defensive

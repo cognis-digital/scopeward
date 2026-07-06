@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "scopeward"
-version = "0.1.0"
+version = "0.2.0"
 description = "Engagement authorization and scope enforcement for authorized mobile security testing."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,6 +26,14 @@ dev = ["pytest>=7"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["scopeward"]
+
+# Bundle the JSON Schema into the installed package so the CLI's `validate`
+# works from a wheel, not just from a source clone.
+[tool.hatch.build.targets.wheel.force-include]
+"schema/scope.schema.json" = "scopeward/_schema/scope.schema.json"
+
+[tool.hatch.build.targets.sdist]
+include = ["scopeward", "schema", "tests", "demos", "examples", "docs", "README.md", "LICENSE", "DISCLAIMER.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cognis.digital/schema/scopeward/scope.schema.json",
+  "title": "scopeward engagement scope",
+  "description": "A signed-or-unsigned engagement authorization for authorized mobile security testing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "engagement_id",
+    "client",
+    "authorized_by",
+    "roe",
+    "not_before",
+    "not_after",
+    "targets",
+    "allowed_modules"
+  ],
+  "properties": {
+    "engagement_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier for this engagement."
+    },
+    "client": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The organization that authorized the assessment."
+    },
+    "authorized_by": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Named individual who authorized the assessment."
+    },
+    "roe": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Rules of engagement (human-readable)."
+    },
+    "not_before": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 start of the engagement window."
+    },
+    "not_after": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 end of the engagement window."
+    },
+    "targets": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Apps authorized for testing.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["platform", "app_id"],
+        "properties": {
+          "platform": { "type": "string", "enum": ["android", "ios"] },
+          "app_id": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "devices": {
+      "type": "array",
+      "description": "Devices authorized for testing.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["device_id"],
+        "properties": {
+          "device_id": { "type": "string", "minLength": 1 },
+          "label": { "type": "string" }
+        }
+      }
+    },
+    "allowed_modules": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Module names permitted to run.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "allow_destructive": {
+      "type": "boolean",
+      "description": "Whether destructive operations are permitted at all."
+    },
+    "grants": {
+      "type": "array",
+      "description": "Scoped, optionally-expiring capability grants.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["grant_id", "target", "capabilities"],
+        "properties": {
+          "grant_id": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "minLength": 1 },
+          "capabilities": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": ["read", "instrument", "modify", "destructive"]
+            }
+          },
+          "module": { "type": "string" },
+          "device_id": { "type": "string" },
+          "expires": { "type": "string", "format": "date-time" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "revocations": {
+      "type": "array",
+      "description": "Mid-engagement withdrawals of authorization.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "value"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["grant", "target", "module", "device"] },
+          "value": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string" },
+          "at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "signature": {
+      "type": "string",
+      "description": "Detached hex HMAC-SHA256 over the canonical scope bytes.",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
